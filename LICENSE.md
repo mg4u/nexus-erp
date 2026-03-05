@@ -42,7 +42,7 @@ This requirement ensures that all improvements benefit the entire community of u
 If you wish to use the Software for Commercial Use, you **must** contact the Author to obtain a separate commercial license.
 
 **Contact for commercial licensing:**
-- **Email:** [Mahmoud Hassan](mailto:mg4udev@gmail.com)
+- **Email:** [Mahmoud Hassan](mailto:mahmoud.dev.gamal@gmail.com)
 - **GitHub:** [mg4u](https://github.com/mg4u)
 
 Commercial licenses are negotiated on a case-by-case basis and may include different terms, support agreements, and pricing.

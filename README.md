@@ -19,8 +19,10 @@ A **production-grade, multi-tenant SaaS ERP platform** built with enterprise arc
 | 📦 **Products** | CRUD, stock management, low-stock alerts |
 | 👥 **Customers** | CRM with purchase history |
 | 🛒 **Orders** | Stock validation, auto-reduction, draft invoice generation |
-| 🧾 **Invoices** | Full lifecycle: Draft → Sent → Paid → Cancelled |
+| 🧾 **Invoices** | Full lifecycle: Draft → Sent → Partially Paid → Paid → Cancelled |
 | 💳 **Payments** | DB transactions, overpayment protection, auto-mark paid |
+| 📒 **Chart of Accounts** | Hierarchical tree, account types (Asset/Liability/Equity/Revenue/Expense), postable leaf nodes |
+| 📔 **Journal Entries** | Automated double-entry bookkeeping, trial balance, reversal support |
 | 📊 **Reports** | Redis-cached analytics, revenue, top products, category breakdown |
 | 🤖 **AI Assistant** | Natural language business queries (OpenAI GPT-4 or Stub mode) |
 
@@ -178,6 +180,16 @@ PATCH            /api/v1/invoices/:id/status
 GET              /api/v1/invoices/overdue
 
 GET|POST         /api/v1/payments
+
+GET|POST         /api/v1/chart-of-accounts
+GET|PATCH|DELETE /api/v1/chart-of-accounts/:id
+PATCH            /api/v1/chart-of-accounts/:id/toggle-postable
+
+GET|POST         /api/v1/journal-entries
+GET              /api/v1/journal-entries/:id
+POST             /api/v1/journal-entries/:id/reverse
+GET              /api/v1/journal-entries/trial-balance
+GET              /api/v1/journal-entries/validate
 ```
 
 ### Reports (Redis-cached)
