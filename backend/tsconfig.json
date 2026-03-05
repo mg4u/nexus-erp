@@ -36,5 +36,11 @@
                 "common/*"
             ]
         }
-    }
+    },
+    "exclude": [
+        "node_modules",
+        "dist",
+        "prisma/seed.ts",
+        "prisma/seeds"
+    ]
 }

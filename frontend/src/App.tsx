@@ -12,6 +12,8 @@ import { InvoicesPage } from '@/pages/InvoicesPage';
 import { PaymentsPage } from '@/pages/PaymentsPage';
 import { ReportsPage } from '@/pages/ReportsPage';
 import { AiAssistantPage } from '@/pages/AiAssistantPage';
+import { ChartOfAccountsPage } from '@/pages/ChartOfAccountsPage';
+import { JournalPage } from '@/pages/JournalPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -52,6 +54,8 @@ export default function App() {
                     <Route path="payments" element={<PaymentsPage />} />
                     <Route path="reports" element={<ReportsPage />} />
                     <Route path="ai-assistant" element={<AiAssistantPage />} />
+                    <Route path="accounts" element={<ChartOfAccountsPage />} />
+                    <Route path="journal" element={<JournalPage />} />
                 </Route>
 
                 {/* Fallback */}

@@ -28,9 +28,15 @@ export function PaymentsPage() {
         queryFn: () => paymentsApi.getAll({ page, limit: 20 }),
     });
 
-    const { data: sentInvoices } = useQuery({
-        queryKey: ['invoices-sent'],
-        queryFn: () => invoicesApi.getAll({ status: 'SENT', limit: 50 }),
+    const { data: payableInvoices } = useQuery({
+        queryKey: ['invoices-payable'],
+        queryFn: async () => {
+            const [sent, partial] = await Promise.all([
+                invoicesApi.getAll({ status: 'SENT', limit: 50 }),
+                invoicesApi.getAll({ status: 'PARTIALLY_PAID', limit: 50 }),
+            ]);
+            return { items: [...(sent?.items ?? []), ...(partial?.items ?? [])] };
+        },
         enabled: showForm,
     });
 
@@ -104,7 +110,7 @@ export function PaymentsPage() {
                                 <label className="block text-xs text-slate-400 mb-1">Invoice</label>
                                 <select value={form.invoiceId} onChange={e => setForm(f => ({ ...f, invoiceId: e.target.value }))} className="input" required>
                                     <option value="">Select invoice...</option>
-                                    {sentInvoices?.items.map((inv: any) => (
+                                    {payableInvoices?.items.map((inv: any) => (
                                         <option key={inv.id} value={inv.id}>
                                             {inv.invoiceNumber} — ${Number(inv.total).toFixed(2)} ({inv.order?.customer?.firstName} {inv.order?.customer?.lastName})
                                         </option>

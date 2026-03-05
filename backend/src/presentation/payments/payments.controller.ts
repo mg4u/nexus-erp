@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Payments')
 @ApiBearerAuth()
@@ -23,7 +24,11 @@ export class PaymentsController {
 
     @Post()
     @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.ACCOUNTANT)
-    create(@TenantId() tenantId: string, @Body() dto: CreatePaymentDto) {
-        return this.paymentsService.create(tenantId, dto);
+    create(
+        @TenantId() tenantId: string,
+        @CurrentUser('sub') userId: string,
+        @Body() dto: CreatePaymentDto,
+    ) {
+        return this.paymentsService.create(tenantId, dto, userId);
     }
 }

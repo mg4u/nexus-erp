@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException, ConflictException }
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { UpdateInvoiceStatusDto, InvoicesQueryDto } from './dto/invoices-payments.dto';
 import { InvoiceStatus, Prisma } from '@prisma/client';
+import { JournalService } from '../journal/journal.service';
 
 @Injectable()
 export class InvoicesService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly journalService: JournalService,
+    ) { }
 
     async findAll(tenantId: string, query: InvoicesQueryDto) {
         const { page = 1, limit = 20, status } = query;
@@ -46,13 +50,14 @@ export class InvoicesService {
         return invoice;
     }
 
-    async updateStatus(tenantId: string, id: string, dto: UpdateInvoiceStatusDto) {
+    async updateStatus(tenantId: string, id: string, dto: UpdateInvoiceStatusDto, userId: string) {
         const invoice = await this.findOne(tenantId, id);
 
-        // Lifecycle: DRAFT → SENT → PAID | CANCELLED
+        // Lifecycle: DRAFT → SENT → PARTIALLY_PAID → PAID | CANCELLED
         const allowedTransitions: Record<InvoiceStatus, InvoiceStatus[]> = {
             [InvoiceStatus.DRAFT]: [InvoiceStatus.SENT, InvoiceStatus.CANCELLED],
-            [InvoiceStatus.SENT]: [InvoiceStatus.PAID, InvoiceStatus.CANCELLED],
+            [InvoiceStatus.SENT]: [InvoiceStatus.PAID, InvoiceStatus.PARTIALLY_PAID, InvoiceStatus.CANCELLED],
+            [InvoiceStatus.PARTIALLY_PAID]: [InvoiceStatus.PAID, InvoiceStatus.CANCELLED],
             [InvoiceStatus.PAID]: [],
             [InvoiceStatus.CANCELLED]: [],
         };
@@ -68,7 +73,24 @@ export class InvoicesService {
         if (dto.status === InvoiceStatus.PAID) updateData.paidAt = new Date();
         if (dto.status === InvoiceStatus.CANCELLED) updateData.cancelledAt = new Date();
 
-        return this.prisma.invoice.update({ where: { id }, data: updateData });
+        const updated = await this.prisma.invoice.update({ where: { id }, data: updateData });
+
+        // ── Financial Automation: auto-post on SENT ───────────────────────
+        if (dto.status === InvoiceStatus.SENT) {
+            await this.journalService.autoPostInvoice(tenantId, userId, id);
+        }
+
+        // ── Financial Automation: auto-post on PAID if no journal yet ────
+        if (dto.status === InvoiceStatus.PAID && !invoice.journalEntryId) {
+            await this.journalService.autoPostInvoice(tenantId, userId, id);
+        }
+
+        // ── Financial Automation: auto-reverse on CANCEL (if posted) ─────
+        if (dto.status === InvoiceStatus.CANCELLED) {
+            await this.journalService.autoReversalForInvoice(tenantId, userId, id);
+        }
+
+        return updated;
     }
 
     async getOverdueSummary(tenantId: string) {

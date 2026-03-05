@@ -16,6 +16,8 @@ import { PaymentsModule } from './presentation/payments/payments.module';
 import { ReportsModule } from './presentation/reports/reports.module';
 import { AiModule } from './presentation/ai/ai.module';
 import { HealthModule } from './presentation/health/health.module';
+import { AccountsModule } from './presentation/accounts/accounts.module';
+import { JournalModule } from './presentation/journal/journal.module';
 import { TenantMiddleware } from './common/middleware/tenant.middleware';
 
 @Module({
@@ -69,6 +71,8 @@ import { TenantMiddleware } from './common/middleware/tenant.middleware';
         ReportsModule,
         AiModule,
         HealthModule,
+        AccountsModule,
+        JournalModule,
     ],
 })
 export class AppModule implements NestModule {

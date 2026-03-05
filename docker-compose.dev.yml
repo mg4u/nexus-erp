@@ -1,0 +1,86 @@
+version: '3.9'
+
+# ─── Development override ────────────────────────────────────────────────────
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# What this does:
+#   • Backend  → mounts ./backend/src as a live volume + runs `nest start --watch`
+#                Changes to any .ts file restart NestJS automatically (< 2s)
+#   • Frontend → mounts ./frontend/src as a live volume + runs Vite dev server
+#                Changes to any .tsx/.ts/.css trigger instant HMR in the browser
+#   • Prisma   → schema.prisma already mounted via the migrate service (unchanged)
+#
+# No rebuild or restart needed for code changes — just save the file.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ─── Backend dev (NestJS watch mode) ──────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      # Use the builder stage (has devDependencies + ts-node)
+      target: builder
+    command: npx nest start --watch
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-erp_user}:${POSTGRES_PASSWORD:-erp_secret_password}@postgres:5432/${POSTGRES_DB:-saas_erp}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secret}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3001}
+    volumes:
+      # Live source — NestJS watch picks up any .ts change
+      - ./backend/src:/app/src
+      # Live prisma schema (same as migrate service)
+      - ./backend/prisma:/app/prisma
+      # Protect the container's node_modules from host overwrite
+      - /app/node_modules
+      - /app/dist
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    # Override healthcheck to be more lenient during dev startup
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      start_period: 30s
+      retries: 10
+
+  # ─── Frontend dev (Vite HMR) ──────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: builder
+    # Vite dev server — instant HMR on every file save
+    command: npx vite --host 0.0.0.0 --port 5173
+    environment:
+      # Point Vite proxy at the backend container (resolved via Docker internal DNS)
+      VITE_BACKEND_URL: http://backend:3000
+    volumes:
+      # Live source — Vite watches these and hot-reloads automatically
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - /app/node_modules
+    ports:
+      # Vite dev port (instead of production nginx :80)
+      - "5173:5173"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5173 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 5

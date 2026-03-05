@@ -32,6 +32,7 @@ enum OrderStatus {
 enum InvoiceStatus {
   DRAFT
   SENT
+  PARTIALLY_PAID
   PAID
   CANCELLED
 }
@@ -42,6 +43,20 @@ enum PaymentMethod {
   CASH
   PAYPAL
   STRIPE
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum JournalStatus {
+  DRAFT
+  POSTED
+  REVERSED
 }
 
 // ═══════════════════════════════════════════════
@@ -58,13 +73,15 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   // Relations
-  users     User[]
-  products  Product[]
-  customers Customer[]
-  orders    Order[]
-  invoices  Invoice[]
-  payments  Payment[]
-  auditLogs AuditLog[]
+  users          User[]
+  products       Product[]
+  customers      Customer[]
+  orders         Order[]
+  invoices       Invoice[]
+  payments       Payment[]
+  auditLogs      AuditLog[]
+  accounts       Account[]
+  journalEntries JournalEntry[]
 
   @@map("tenants")
 }
@@ -212,31 +229,34 @@ model OrderItem {
 // ═══════════════════════════════════════════════
 
 model Invoice {
-  id            String        @id @default(uuid())
-  tenantId      String
-  orderId       String        @unique
-  invoiceNumber String
-  status        InvoiceStatus @default(DRAFT)
-  dueDate       DateTime
-  subtotal      Decimal       @db.Decimal(10, 2)
-  taxAmount     Decimal       @db.Decimal(10, 2) @default(0)
-  total         Decimal       @db.Decimal(10, 2)
-  notes         String?
-  sentAt        DateTime?
-  paidAt        DateTime?
-  cancelledAt   DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id             String        @id @default(uuid())
+  tenantId       String
+  orderId        String        @unique
+  invoiceNumber  String
+  status         InvoiceStatus @default(DRAFT)
+  journalEntryId String?
+  dueDate        DateTime
+  subtotal       Decimal       @db.Decimal(10, 2)
+  taxAmount      Decimal       @db.Decimal(10, 2) @default(0)
+  total          Decimal       @db.Decimal(10, 2)
+  notes          String?
+  sentAt         DateTime?
+  paidAt         DateTime?
+  cancelledAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   // Relations
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  order         Order     @relation(fields: [orderId], references: [id])
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order         Order         @relation(fields: [orderId], references: [id])
+  journalEntry  JournalEntry? @relation("InvoiceJournal", fields: [journalEntryId], references: [id])
   payments      Payment[]
 
   @@unique([tenantId, invoiceNumber])
   @@index([tenantId])
   @@index([tenantId, status])
   @@index([tenantId, dueDate])
+  @@index([journalEntryId])
   @@map("invoices")
 }
 
@@ -245,23 +265,26 @@ model Invoice {
 // ═══════════════════════════════════════════════
 
 model Payment {
-  id            String        @id @default(uuid())
-  tenantId      String
-  invoiceId     String
-  amount        Decimal       @db.Decimal(10, 2)
-  method        PaymentMethod
-  reference     String?       // External payment reference
-  notes         String?
-  paidAt        DateTime      @default(now())
-  createdAt     DateTime      @default(now())
+  id             String        @id @default(uuid())
+  tenantId       String
+  invoiceId      String
+  journalEntryId String?
+  amount         Decimal       @db.Decimal(10, 2)
+  method         PaymentMethod
+  reference      String?       // External payment reference
+  notes          String?
+  paidAt         DateTime      @default(now())
+  createdAt      DateTime      @default(now())
 
   // Relations
-  tenant        Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoice       Invoice @relation(fields: [invoiceId], references: [id])
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice       Invoice       @relation(fields: [invoiceId], references: [id])
+  journalEntry  JournalEntry? @relation("PaymentJournal", fields: [journalEntryId], references: [id])
 
   @@index([tenantId])
   @@index([tenantId, invoiceId])
   @@index([tenantId, paidAt])
+  @@index([journalEntryId])
   @@map("payments")
 }
 
@@ -291,4 +314,89 @@ model AuditLog {
   @@index([tenantId, userId])
   @@index([tenantId, createdAt])
   @@map("audit_logs")
+}
+
+// ═══════════════════════════════════════════════
+// CHART OF ACCOUNTS
+// ═══════════════════════════════════════════════
+
+model Account {
+  id        String      @id @default(uuid())
+  tenantId  String
+  code      String
+  name      String
+  type      AccountType
+  parentId  String?
+  level     Int         @default(0)
+  isSystem  Boolean     @default(false)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  isPostable Boolean     @default(false)
+
+  // Relations
+  tenant           Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parent           Account?           @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children         Account[]          @relation("AccountHierarchy")
+  journalEntryLines JournalEntryLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, parentId])
+  @@index([tenantId, type])
+  @@index([tenantId, isActive])
+  @@index([tenantId, isPostable])
+  @@index([tenantId, createdAt])
+  @@map("accounts")
+}
+
+// ═══════════════════════════════════════════════
+// JOURNAL ENTRY
+// ═══════════════════════════════════════════════
+
+model JournalEntry {
+  id            String        @id @default(uuid())
+  tenantId      String
+  referenceType String?       // "INVOICE" | "PAYMENT" | "MANUAL"
+  referenceId   String?       // FK to invoice/payment id (not enforced by Prisma relation — flexible ref)
+  description   String
+  status        JournalStatus @default(DRAFT)
+  postedAt      DateTime?
+  reversalOf    String?       // Self-referential FK to the original journal entry
+  createdBy     String        // FK to users.id
+  createdAt     DateTime      @default(now())
+
+  // Relations
+  tenant        Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  originalEntry JournalEntry?      @relation("JournalReversal", fields: [reversalOf], references: [id])
+  reversals     JournalEntry[]     @relation("JournalReversal")
+  lines         JournalEntryLine[]
+  invoices      Invoice[]          @relation("InvoiceJournal")
+  payments      Payment[]          @relation("PaymentJournal")
+
+  @@index([tenantId, status, postedAt])
+  @@index([tenantId, referenceType, referenceId])
+  @@index([tenantId, createdAt])
+  @@map("journal_entries")
+}
+
+// ═══════════════════════════════════════════════
+// JOURNAL ENTRY LINE
+// ═══════════════════════════════════════════════
+
+model JournalEntryLine {
+  id             String       @id @default(uuid())
+  journalEntryId String
+  accountId      String
+  debit          Decimal      @db.Decimal(18, 4) @default(0)
+  credit         Decimal      @db.Decimal(18, 4) @default(0)
+  description    String?
+
+  // Relations
+  journalEntry   JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account        Account      @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_entry_lines")
 }

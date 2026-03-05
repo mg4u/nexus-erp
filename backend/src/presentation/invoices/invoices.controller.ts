@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Invoices')
 @ApiBearerAuth()
@@ -34,8 +35,13 @@ export class InvoicesController {
 
     @Patch(':id/status')
     @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.ACCOUNTANT)
-    @ApiOperation({ summary: 'Update invoice lifecycle status' })
-    updateStatus(@TenantId() tenantId: string, @Param('id') id: string, @Body() dto: UpdateInvoiceStatusDto) {
-        return this.invoicesService.updateStatus(tenantId, id, dto);
+    @ApiOperation({ summary: 'Update invoice lifecycle status (auto-generates journal entries)' })
+    updateStatus(
+        @TenantId() tenantId: string,
+        @CurrentUser('sub') userId: string,
+        @Param('id') id: string,
+        @Body() dto: UpdateInvoiceStatusDto,
+    ) {
+        return this.invoicesService.updateStatus(tenantId, id, dto, userId);
     }
 }

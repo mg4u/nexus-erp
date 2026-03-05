@@ -109,9 +109,11 @@ services:
     networks:
       - erp-network
 
-  # ─── Database setup runner (one-shot) ───────────────────────────
-  # Uses `prisma db push` to create tables directly from schema.prisma
-  # (no migration files needed). Then seeds the DB with sample data.
+  # ─── Database migration runner (one-shot) ──────────────────────
+  # Uses `prisma db push` to sync schema changes without requiring
+  # migration history (safe for this project bootstrapped with db push).
+  # Usage:
+  #   docker compose --profile migrate up migrate
   migrate:
     build:
       context: ./backend
@@ -120,7 +122,19 @@ services:
     container_name: saas-erp-migrate
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-erp_user}:${POSTGRES_PASSWORD:-erp_secret_password}@postgres:5432/${POSTGRES_DB:-saas_erp}
-    command: sh -c "npx prisma db push --accept-data-loss && npx ts-node prisma/seed.ts"
+    command: >
+      sh -c "
+        echo '▶ Syncing schema with prisma db push...' &&
+        npx prisma db push --skip-generate &&
+        echo '▶ Seeding database...' &&
+        npx ts-node --transpile-only prisma/seed.ts &&
+        echo '✅ Schema sync and seeding complete!'
+      "
+    volumes:
+      # Mount live prisma dir so schema changes are picked up without rebuilding the image
+      - ./backend/prisma:/app/prisma
+      # Protect the container's node_modules from the bind mount
+      - /app/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -128,6 +142,7 @@ services:
       - erp-network
     profiles:
       - migrate
+
 
 volumes:
   postgres_data:

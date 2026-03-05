@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { CreatePaymentDto, PaymentsQueryDto } from '../invoices/dto/invoices-payments.dto';
 import { InvoiceStatus, Prisma } from '@prisma/client';
+import { JournalService } from '../journal/journal.service';
 
 @Injectable()
 export class PaymentsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly journalService: JournalService,
+    ) { }
 
     async findAll(tenantId: string, query: PaymentsQueryDto) {
         const { page = 1, limit = 20, invoiceId } = query;
@@ -31,8 +35,8 @@ export class PaymentsService {
         return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
     }
 
-    async create(tenantId: string, dto: CreatePaymentDto) {
-        return this.prisma.$transaction(async (tx) => {
+    async create(tenantId: string, dto: CreatePaymentDto, userId: string) {
+        const payment = await this.prisma.$transaction(async (tx) => {
             // Lock invoice row and validate
             const invoice = await tx.invoice.findFirst({
                 where: { id: dto.invoiceId, tenantId },
@@ -64,7 +68,7 @@ export class PaymentsService {
             }
 
             // Create payment
-            const payment = await tx.payment.create({
+            const newPayment = await tx.payment.create({
                 data: {
                     tenantId,
                     invoiceId: dto.invoiceId,
@@ -75,16 +79,26 @@ export class PaymentsService {
                 },
             });
 
-            // Auto-mark invoice as PAID if fully paid
+            // Update invoice status: PAID or PARTIALLY_PAID
             const newTotalPaid = totalPaid + dto.amount;
             if (newTotalPaid >= Number(invoice.total) - 0.01) {
                 await tx.invoice.update({
                     where: { id: dto.invoiceId },
                     data: { status: InvoiceStatus.PAID, paidAt: new Date() },
                 });
+            } else if (newTotalPaid > 0) {
+                await tx.invoice.update({
+                    where: { id: dto.invoiceId },
+                    data: { status: InvoiceStatus.PARTIALLY_PAID },
+                });
             }
 
-            return payment;
+            return newPayment;
         });
+
+        // ── Financial Automation: auto-post payment journal entry ─────────
+        await this.journalService.autoPostPayment(tenantId, userId, payment.id);
+
+        return payment;
     }
 }
