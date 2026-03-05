@@ -283,4 +283,12 @@ The AI module uses an **abstracted provider pattern**. It auto-selects:
 
 ## 📝 License
 
-MIT © SaaS ERP Team
+This project is **Source Available** under a custom non-commercial license. See [LICENSE.md](LICENSE.md) for full terms.
+
+- ✅ Free for personal, educational, and non-commercial use
+- ✅ Contributions welcome — must be submitted to this repository
+- ❌ Commercial use requires a separate license
+
+**For commercial licensing inquiries, contact:** [mahmoud.dev.gamal@gmail.com](mailto:mahmoud.dev.gamal@gmail.com)
+
+© 2025–2026 Mahmoud Hassan. All rights reserved.
