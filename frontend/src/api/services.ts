@@ -20,6 +20,44 @@ export const authApi = {
 };
 
 // ─── Dashboard ───────────────────────────────────────────────────
+
+export interface ProfitLossLine {
+    accountId: string;
+    accountCode: string;
+    accountName: string;
+    amount: string;
+}
+
+export interface ProfitLossResult {
+    dateFrom: string;
+    dateTo: string;
+    revenueLines: ProfitLossLine[];
+    expenseLines: ProfitLossLine[];
+    totalRevenue: string;
+    totalExpenses: string;
+    netProfit: string;
+    isProfit: boolean;
+    cachedAt?: string;
+}
+
+export interface ProfitLossEntryRow {
+    date: string;
+    journalReference: string;
+    accountCode: string;
+    accountName: string;
+    description: string;
+    debit: string;
+    credit: string;
+}
+
+export interface ProfitLossEntriesResult {
+    rows: ProfitLossEntryRow[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+}
+
 export const reportsApi = {
     getDashboard: () => apiClient.get('/v1/reports/dashboard').then((r) => r.data.data),
     getMonthlySales: (year?: number) =>
@@ -27,6 +65,16 @@ export const reportsApi = {
     getTopProducts: (limit = 10) =>
         apiClient.get(`/v1/reports/top-products?limit=${limit}`).then((r) => r.data.data),
     getRevenueByCategory: () => apiClient.get('/v1/reports/revenue-by-category').then((r) => r.data.data),
+    getProfitLoss: (dateFrom?: string, dateTo?: string) =>
+        apiClient.get('/v1/reports/profit-loss', {
+            params: { ...(dateFrom && { dateFrom }), ...(dateTo && { dateTo }) },
+        }).then((r) => r.data.data as ProfitLossResult),
+    getProfitLossEntries: (dateFrom?: string, dateTo?: string, page = 1, limit = 20) =>
+        apiClient.get('/v1/reports/profit-loss/entries', {
+            params: { ...(dateFrom && { dateFrom }), ...(dateTo && { dateTo }), page, limit },
+        }).then((r) => r.data.data as ProfitLossEntriesResult),
+    invalidateCache: () =>
+        apiClient.post('/v1/reports/cache/invalidate').then((r) => r.data),
 };
 
 // ─── Users ───────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, Package, UserCheck, ShoppingCart,
-    FileText, CreditCard, BarChart3, Bot, LogOut, Building2, Menu, X, BookOpen, Scroll
+    FileText, CreditCard, BarChart3, Bot, LogOut, Building2, Menu, X, BookOpen, Scroll, TrendingUp
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '@/store/auth.store';
@@ -19,6 +19,7 @@ const navLinks = [
     { to: '/accounts', icon: BookOpen, label: 'Chart of Accounts' },
     { to: '/journal', icon: Scroll, label: 'Journal Entries' },
     { to: '/reports', icon: BarChart3, label: 'Reports' },
+    { to: '/profit-loss', icon: TrendingUp, label: 'Profit & Loss' },
     { to: '/ai-assistant', icon: Bot, label: 'AI Assistant' },
 ];
 

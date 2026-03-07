@@ -46,11 +46,19 @@ export class JournalCacheService {
 
     async invalidate(tenantId: string): Promise<void> {
         try {
+            // Clear trial balance cache
             await this.redis.del(this.key(tenantId));
-            this.logger.debug(`Trial balance cache invalidated for tenant ${tenantId}`);
+
+            // Clear all report caches for this tenant (P&L, dashboard, etc.)
+            const reportKeys = await this.redis.keys(`reports:*:${tenantId}*`);
+            if (reportKeys.length > 0) {
+                await this.redis.del(...reportKeys);
+            }
+
+            this.logger.debug(`Trial balance + report caches invalidated for tenant ${tenantId}`);
         } catch (err) {
             this.logger.warn(
-                `Redis DEL failed for trial balance (tenant ${tenantId}): ${(err as Error).message}`,
+                `Redis cache invalidation failed for tenant ${tenantId}: ${(err as Error).message}`,
             );
         }
     }

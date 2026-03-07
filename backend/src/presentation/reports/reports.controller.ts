@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards, ParseIntPipe, DefaultValuePipe } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { ReportsService } from '../../application/reports/reports.service';
@@ -14,6 +14,34 @@ import { TenantId } from '../../common/decorators/tenant-id.decorator';
 @Controller({ path: 'reports', version: '1' })
 export class ReportsController {
     constructor(private readonly reportsService: ReportsService) { }
+
+    @Get('profit-loss')
+    @ApiOperation({ summary: 'Profit & Loss report from journal ledger (cached 1hr)' })
+    @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'Start date (YYYY-MM-DD). Defaults to 1st of current month.' })
+    @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'End date (YYYY-MM-DD). Defaults to today.' })
+    getProfitLoss(
+        @TenantId() tenantId: string,
+        @Query('dateFrom') dateFrom?: string,
+        @Query('dateTo') dateTo?: string,
+    ) {
+        return this.reportsService.getProfitLoss(tenantId, dateFrom, dateTo);
+    }
+
+    @Get('profit-loss/entries')
+    @ApiOperation({ summary: 'Detailed journal entry lines behind the P&L totals (paginated)' })
+    @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'Start date (YYYY-MM-DD)' })
+    @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'End date (YYYY-MM-DD)' })
+    @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+    @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20)' })
+    getProfitLossEntries(
+        @TenantId() tenantId: string,
+        @Query('dateFrom') dateFrom?: string,
+        @Query('dateTo') dateTo?: string,
+        @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
+        @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit?: number,
+    ) {
+        return this.reportsService.getProfitLossEntries(tenantId, dateFrom, dateTo, page, limit);
+    }
 
     @Get('dashboard')
     @ApiOperation({ summary: 'Get dashboard KPI summary (cached 1hr)' })
@@ -46,4 +74,13 @@ export class ReportsController {
     getRevenueByCategory(@TenantId() tenantId: string) {
         return this.reportsService.getRevenueByCategory(tenantId);
     }
+
+    @Post('cache/invalidate')
+    @Roles(UserRole.ADMIN)
+    @ApiOperation({ summary: 'Manually invalidate all report caches for the current tenant (ADMIN only)' })
+    async invalidateCache(@TenantId() tenantId: string) {
+        await this.reportsService.invalidateCache(tenantId);
+        return { message: 'Report caches invalidated successfully' };
+    }
 }
+
