@@ -173,6 +173,7 @@ export function ProfitLossPage() {
                         </div>
                         <p className="text-slate-400 text-sm">Total Revenue (<small> <i>Total Credits - Total Debits</i></small>)</p>
                     </div>
+                    
                     {isLoading ? (
                         <div className="h-9 bg-slate-800/50 rounded animate-pulse w-32" />
                     ) : (
