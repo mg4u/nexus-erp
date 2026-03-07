@@ -30,6 +30,8 @@ A **production-grade, multi-tenant SaaS ERP platform** built with enterprise arc
 
 ## 🏗️ Architecture
 
+For comprehensive architecture details, including System Context, Container, Component diagrams, and Data Flow explanations, please refer to the **[Architecture Documentation](./documentation/architecture.md)**.
+
 ```
 saas-erp/
 ├── backend/                   # NestJS Clean Architecture
