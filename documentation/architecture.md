@@ -15,16 +15,10 @@ C4Context
 
     System(erp, "SaaS ERP Platform", "Allows tenants to manage their business operations, inventory, and financials securely.")
 
-    System_Ext(email, "Email Service", "Sends transaction emails (e.g., invoices, welcome emails).")
-    System_Ext(payment_gateway, "Payment Gateway", "Processes credit card payments for tenant subscriptions and invoices.")
-
     Rel(admin, erp, "Manages platform and tenants", "HTTPS")
     Rel(manager, erp, "Manages tenant settings and users", "HTTPS")
     Rel(accountant, erp, "Manages financials and reporting", "HTTPS")
     Rel(employee, erp, "Manages products and orders", "HTTPS")
-
-    Rel(erp, email, "Sends emails using", "SMTP/API")
-    Rel(erp, payment_gateway, "Processes payments using", "HTTPS/API")
 ```
 
 ## 2. Container Diagram (Level 2)
@@ -42,11 +36,8 @@ C4Container
         Container(api, "API Application", "Node.js, NestJS, TypeScript", "Provides the backend REST APIs, enforces multi-tenancy, RBAC, and business logic.")
         ContainerDb(db, "Primary Database", "PostgreSQL", "Stores user, tenant, product, order, invoice, and financial data securely. Uses composite indexes for tenant isolation.")
         Container(cache, "Cache & Queue Store", "Redis", "Caches frequently accessed data (e.g., CoA) and stores background job queues.")
-        Container(worker, "Background Worker", "Node.js, BullMQ", "Processes asynchronous background jobs like report generation or email sending.")
+        Container(worker, "Background Worker", "Node.js, BullMQ", "Processes asynchronous background jobs like report generation.")
     }
-
-    System_Ext(email, "Email Service", "Sends emails.")
-    System_Ext(payment_gateway, "Payment Gateway", "Processes payments.")
 
     Rel(user, spa, "Interacts with", "HTTPS")
     Rel(spa, api, "Makes API calls to", "JSON/HTTPS")
@@ -54,9 +45,7 @@ C4Container
     Rel(api, cache, "Reads from and writes to", "Redis/TCP")
     Rel(api, worker, "Enqueues jobs into", "Redis/TCP")
     Rel(worker, db, "Reads from and writes to", "Prisma/TCP")
-    Rel(worker, email, "Sends emails via", "API")
     Rel(worker, cache, "Polls queue from", "Redis/TCP")
-    Rel(api, payment_gateway, "Integrates with", "HTTPS/API")
 ```
 
 ## 3. Component Diagram (Level 3 - Backend API)
