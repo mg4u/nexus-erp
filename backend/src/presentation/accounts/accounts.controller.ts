@@ -17,13 +17,13 @@ import { UserRole } from '@prisma/client';
 import { AccountsService } from '../../application/accounts/accounts.service';
 import { CreateAccountDto, UpdateAccountDto, AccountsQueryDto } from '../../application/accounts/dto/accounts.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 
 @ApiTags('Accounts (Chart of Accounts)')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller({ path: 'accounts', version: '1' })
 export class AccountsController {
     constructor(private readonly accountsService: AccountsService) { }
@@ -31,7 +31,7 @@ export class AccountsController {
     // ── Read endpoints (Admin, Accountant, Manager) ───────────────────────────
 
     @Get()
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT, UserRole.MANAGER)
+    @RequirePermissions('chart_of_accounts', 'read')
     @ApiOperation({ summary: 'Get paginated flat list of accounts' })
     @ApiResponse({ status: 200, description: 'Paginated account list' })
     findAll(@TenantId() tenantId: string, @Query() query: AccountsQueryDto) {
@@ -39,7 +39,7 @@ export class AccountsController {
     }
 
     @Get('tree')
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT, UserRole.MANAGER)
+    @RequirePermissions('chart_of_accounts', 'read')
     @ApiOperation({ summary: 'Get full hierarchical Chart of Accounts tree (Redis-cached)' })
     @ApiResponse({ status: 200, description: 'Hierarchical account tree' })
     getTree(@TenantId() tenantId: string) {
@@ -47,7 +47,7 @@ export class AccountsController {
     }
 
     @Get(':id')
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT, UserRole.MANAGER)
+    @RequirePermissions('chart_of_accounts', 'read')
     @ApiOperation({ summary: 'Get a single account with its direct children' })
     @ApiResponse({ status: 200, description: 'Account details' })
     @ApiResponse({ status: 404, description: 'Account not found' })
@@ -61,7 +61,7 @@ export class AccountsController {
     // ── Write endpoints (Admin, Accountant) ───────────────────────────────────
 
     @Post()
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT)
+    @RequirePermissions('chart_of_accounts', 'create')
     @ApiOperation({ summary: 'Create a new account' })
     @ApiResponse({ status: 201, description: 'Account created' })
     @ApiResponse({ status: 409, description: 'Duplicate account code' })
@@ -70,7 +70,7 @@ export class AccountsController {
     }
 
     @Post('seed')
-    @Roles(UserRole.ADMIN)
+    @RequirePermissions('chart_of_accounts', 'create')
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: 'Seed default Chart of Accounts for this tenant (idempotent)' })
     @ApiResponse({ status: 200, description: 'Seed completed' })
@@ -79,7 +79,7 @@ export class AccountsController {
     }
 
     @Patch(':id')
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT)
+    @RequirePermissions('chart_of_accounts', 'update')
     @ApiOperation({ summary: 'Update account name, code, type, or parent' })
     @ApiResponse({ status: 200, description: 'Account updated' })
     @ApiResponse({ status: 404, description: 'Account not found' })
@@ -92,7 +92,7 @@ export class AccountsController {
     }
 
     @Patch(':id/disable')
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT)
+    @RequirePermissions('chart_of_accounts', 'delete')
     @ApiOperation({ summary: 'Disable an account (soft-delete)' })
     @ApiResponse({ status: 200, description: 'Account disabled' })
     @ApiResponse({ status: 409, description: 'Cannot disable: has active children' })
@@ -104,7 +104,7 @@ export class AccountsController {
     }
 
     @Patch(':id/postable')
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT)
+    @RequirePermissions('chart_of_accounts', 'update')
     @ApiOperation({ summary: 'Toggle isPostable flag on a leaf account' })
     @ApiResponse({ status: 200, description: '{ id, isPostable } — new state returned' })
     @ApiResponse({ status: 409, description: 'Cannot mark as postable: has child accounts' })
@@ -118,7 +118,7 @@ export class AccountsController {
     // ── Delete endpoint (Admin only) ──────────────────────────────────────────
 
     @Delete(':id')
-    @Roles(UserRole.ADMIN)
+    @RequirePermissions('chart_of_accounts', 'delete')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Permanently delete an account (non-system, no children)' })
     @ApiResponse({ status: 204, description: 'Account deleted' })

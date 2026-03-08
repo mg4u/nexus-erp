@@ -3,19 +3,19 @@ import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger'
 import { UserRole } from '@prisma/client';
 import { ReportsService } from '../../application/reports/reports.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 
 @ApiTags('Reports')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.ACCOUNTANT)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller({ path: 'reports', version: '1' })
 export class ReportsController {
     constructor(private readonly reportsService: ReportsService) { }
 
     @Get('profit-loss')
+    @RequirePermissions('profit_loss_report', 'read')
     @ApiOperation({ summary: 'Profit & Loss report from journal ledger (cached 1hr)' })
     @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'Start date (YYYY-MM-DD). Defaults to 1st of current month.' })
     @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'End date (YYYY-MM-DD). Defaults to today.' })
@@ -28,6 +28,7 @@ export class ReportsController {
     }
 
     @Get('profit-loss/entries')
+    @RequirePermissions('profit_loss_report', 'read')
     @ApiOperation({ summary: 'Detailed journal entry lines behind the P&L totals (paginated)' })
     @ApiQuery({ name: 'dateFrom', required: false, type: String, description: 'Start date (YYYY-MM-DD)' })
     @ApiQuery({ name: 'dateTo', required: false, type: String, description: 'End date (YYYY-MM-DD)' })
@@ -44,12 +45,14 @@ export class ReportsController {
     }
 
     @Get('dashboard')
+    @RequirePermissions('reports', 'read')
     @ApiOperation({ summary: 'Get dashboard KPI summary (cached 1hr)' })
     getDashboard(@TenantId() tenantId: string) {
         return this.reportsService.getDashboardSummary(tenantId);
     }
 
     @Get('monthly-sales')
+    @RequirePermissions('reports', 'read')
     @ApiOperation({ summary: 'Monthly revenue aggregation by year' })
     @ApiQuery({ name: 'year', required: false, type: Number })
     getMonthlySales(
@@ -60,6 +63,7 @@ export class ReportsController {
     }
 
     @Get('top-products')
+    @RequirePermissions('reports', 'read')
     @ApiOperation({ summary: 'Top products by revenue (cached 1hr)' })
     @ApiQuery({ name: 'limit', required: false, type: Number })
     getTopProducts(
@@ -70,13 +74,14 @@ export class ReportsController {
     }
 
     @Get('revenue-by-category')
+    @RequirePermissions('reports', 'read')
     @ApiOperation({ summary: 'Revenue breakdown by product category' })
     getRevenueByCategory(@TenantId() tenantId: string) {
         return this.reportsService.getRevenueByCategory(tenantId);
     }
 
     @Post('cache/invalidate')
-    @Roles(UserRole.ADMIN)
+    @RequirePermissions('reports', 'delete')
     @ApiOperation({ summary: 'Manually invalidate all report caches for the current tenant (ADMIN only)' })
     async invalidateCache(@TenantId() tenantId: string) {
         await this.reportsService.invalidateCache(tenantId);

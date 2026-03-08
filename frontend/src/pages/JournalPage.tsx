@@ -15,6 +15,8 @@ import {
     FileText, TrendingUp, RotateCcw, Filter, AlertTriangle,
     type LucideIcon,
 } from 'lucide-react';
+import { can } from '@/utils/rbac';
+import { Can } from '@/components/common/Can';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,7 +64,6 @@ function AccountTypeChip({ type }: { type: string }) {
 
 function EntriesTab() {
     const user = useAuthStore((s) => s.user);
-    const isAdmin = user?.role === 'ADMIN';
     const queryClient = useQueryClient();
 
     const [page, setPage] = useState(1);
@@ -146,22 +147,24 @@ function EntriesTab() {
                                 </div>
                                 <div className="flex items-center gap-3 flex-shrink-0">
                                     <StatusBadge status={entry.status} />
-                                    {isAdmin && entry.status === 'POSTED' && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                if (confirm('Reverse this journal entry? A new balancing entry will be created.')) {
-                                                    reverseMutation.mutate(entry.id);
-                                                }
-                                            }}
-                                            disabled={reverseMutation.isPending}
-                                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium
-                                                       bg-rose-500/10 text-rose-400 border border-rose-500/30
-                                                       hover:bg-rose-500/20 transition-colors disabled:opacity-50"
-                                        >
-                                            <RotateCcw size={12} />
-                                            Reverse
-                                        </button>
+                                    {entry.status === 'POSTED' && (
+                                        <Can module="journals" action="update">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (confirm('Reverse this journal entry? A new balancing entry will be created.')) {
+                                                        reverseMutation.mutate(entry.id);
+                                                    }
+                                                }}
+                                                disabled={reverseMutation.isPending}
+                                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium
+                                                           bg-rose-500/10 text-rose-400 border border-rose-500/30
+                                                           hover:bg-rose-500/20 transition-colors disabled:opacity-50"
+                                            >
+                                                <RotateCcw size={12} />
+                                                Reverse
+                                            </button>
+                                        </Can>
                                     )}
                                 </div>
                             </div>
@@ -616,10 +619,9 @@ const tabConfig: { id: Tab; label: string; icon: LucideIcon }[] = [
 export function JournalPage() {
     const [activeTab, setActiveTab] = useState<Tab>('entries');
     const user = useAuthStore((s) => s.user);
-    const isAccountantOrAdmin = user?.role === 'ADMIN' || user?.role === 'ACCOUNTANT';
 
-    // Only accountant/admin can post
-    const visibleTabs = isAccountantOrAdmin ? tabConfig : tabConfig.filter((t) => t.id !== 'post');
+    const hasPostPermission = can(user?.role, 'journals', 'create');
+    const visibleTabs = hasPostPermission ? tabConfig : tabConfig.filter((t) => t.id !== 'post');
 
     return (
         <div className="flex flex-col gap-6">
@@ -656,7 +658,7 @@ export function JournalPage() {
             {/* Tab content */}
             <div>
                 {activeTab === 'entries' && <EntriesTab />}
-                {activeTab === 'post' && isAccountantOrAdmin && <PostEntryTab />}
+                {activeTab === 'post' && hasPostPermission && <PostEntryTab />}
                 {activeTab === 'trial-balance' && <TrialBalanceTab />}
             </div>
         </div>

@@ -15,14 +15,14 @@ import { UserRole } from '@prisma/client';
 import { JournalService } from '../../application/journal/journal.service';
 import { CreateJournalEntryDto, JournalQueryDto, TrialBalanceQueryDto } from '../../application/journal/dto/journal.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { RequirePermissions } from '../../common/decorators/require-permissions.decorator';
 import { TenantId } from '../../common/decorators/tenant-id.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Journal Entries (Double-Entry Accounting)')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller({ path: 'journal-entries', version: '1' })
 export class JournalController {
     constructor(private readonly journalService: JournalService) { }
@@ -30,7 +30,7 @@ export class JournalController {
     // ── List ──────────────────────────────────────────────────────────────────
 
     @Get()
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT, UserRole.MANAGER)
+    @RequirePermissions('journals', 'read')
     @ApiOperation({ summary: 'List journal entries (paginated, filterable by status and date)' })
     @ApiResponse({ status: 200, description: 'Paginated journal entries with lines' })
     findAll(@TenantId() tenantId: string, @Query() query: JournalQueryDto) {
@@ -40,7 +40,7 @@ export class JournalController {
     // ── Trial Balance ─────────────────────────────────────────────────────────
 
     @Get('trial-balance')
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT, UserRole.MANAGER)
+    @RequirePermissions('journals', 'check_trial_balance')
     @ApiOperation({ summary: 'Generate trial balance report (Redis-cached, 5 min TTL)' })
     @ApiResponse({ status: 200, description: 'Trial balance grouped by account' })
     getTrialBalance(@TenantId() tenantId: string, @Query() query: TrialBalanceQueryDto) {
@@ -50,7 +50,7 @@ export class JournalController {
     // ── Validate Global Equality ──────────────────────────────────────────────
 
     @Get('validate')
-    @Roles(UserRole.ADMIN)
+    @RequirePermissions('journals', 'check_trial_balance')
     @ApiOperation({ summary: 'Validate global SUM(debit) = SUM(credit) system invariant (Admin only)' })
     @ApiResponse({ status: 200, description: 'Validation result with totals and balance flag' })
     validate(@TenantId() tenantId: string) {
@@ -60,7 +60,7 @@ export class JournalController {
     // ── Get Single Entry ──────────────────────────────────────────────────────
 
     @Get(':id')
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT, UserRole.MANAGER)
+    @RequirePermissions('journals', 'read')
     @ApiOperation({ summary: 'Get journal entry by ID with full line details' })
     @ApiResponse({ status: 200, description: 'Journal entry with account details on each line' })
     @ApiResponse({ status: 404, description: 'Journal entry not found' })
@@ -74,7 +74,7 @@ export class JournalController {
     // ── Post Manual Entry ─────────────────────────────────────────────────────
 
     @Post()
-    @Roles(UserRole.ADMIN, UserRole.ACCOUNTANT)
+    @RequirePermissions('journals', 'create')
     @ApiOperation({ summary: 'Post a manual double-entry journal entry (enforces debit = credit)' })
     @ApiResponse({ status: 201, description: 'Journal entry posted successfully' })
     @ApiResponse({ status: 400, description: 'Debit ≠ Credit, invalid accounts, or zero-value lines' })
@@ -90,7 +90,7 @@ export class JournalController {
     // ── Reverse Entry ─────────────────────────────────────────────────────────
 
     @Post(':id/reverse')
-    @Roles(UserRole.ADMIN)
+    @RequirePermissions('journals', 'update')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Reverse a POSTED journal entry (Admin only) — creates a mirror balancing entry' })
     @ApiResponse({ status: 201, description: 'Reversal entry created; original locked as REVERSED' })

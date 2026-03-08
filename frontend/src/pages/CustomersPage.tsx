@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, UserCheck, Mail, Phone, MapPin, Pencil, Trash2 } from 'lucide-react';
 import { customersApi, Customer } from '@/api/services';
 import toast from 'react-hot-toast';
+import { Can } from '@/components/common/Can';
 
 export function CustomersPage() {
     const qc = useQueryClient();
@@ -46,9 +47,11 @@ export function CustomersPage() {
                     <h1 className="page-title">Customers</h1>
                     <p className="page-subtitle">{data?.total ?? 0} active customers</p>
                 </div>
-                <button className="btn-primary" onClick={() => { setEditing(null); setForm({ firstName: '', lastName: '', email: '', phone: '', address: '', city: '', country: '' }); setShowForm(true); }}>
-                    <Plus size={18} /> New Customer
-                </button>
+                <Can module="customers" action="create">
+                    <button className="btn-primary" onClick={() => { setEditing(null); setForm({ firstName: '', lastName: '', email: '', phone: '', address: '', city: '', country: '' }); setShowForm(true); }}>
+                        <Plus size={18} /> New Customer
+                    </button>
+                </Can>
             </div>
 
             <div className="relative mb-5">
@@ -72,8 +75,12 @@ export function CustomersPage() {
                                 </div>
                             </div>
                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => handleEdit(c)} className="p-1.5 text-slate-400 hover:text-primary-400 hover:bg-primary-500/10 rounded-lg transition-colors"><Pencil size={14} /></button>
-                                <button onClick={() => deleteMutation.mutate(c.id)} className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                                <Can module="customers" action="update">
+                                    <button onClick={() => handleEdit(c)} className="p-1.5 text-slate-400 hover:text-primary-400 hover:bg-primary-500/10 rounded-lg transition-colors"><Pencil size={14} /></button>
+                                </Can>
+                                <Can module="customers" action="delete">
+                                    <button onClick={() => deleteMutation.mutate(c.id)} className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                                </Can>
                             </div>
                         </div>
                         <div className="space-y-1.5">

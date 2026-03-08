@@ -1,12 +1,13 @@
+import React, { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
     LayoutDashboard, Users, Package, UserCheck, ShoppingCart,
     FileText, CreditCard, BarChart3, Bot, LogOut, Building2, Menu, X, BookOpen, Scroll, TrendingUp
 } from 'lucide-react';
-import { useState } from 'react';
 import { useAuthStore } from '@/store/auth.store';
-import { authApi } from '@/api/services';
+import { can, RbacModule } from '@/utils/rbac';
 import toast from 'react-hot-toast';
+import { authApi } from '@/api/services';
 
 const navLinks = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -65,7 +66,23 @@ export function AppLayout() {
 
                 {/* Nav */}
                 <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-                    {navLinks.map(({ to, icon: Icon, label }) => (
+                    {navLinks.filter(link => {
+                        const moduleMap: Record<string, RbacModule> = {
+                            '/users': 'users',
+                            '/products': 'products',
+                            '/customers': 'customers',
+                            '/orders': 'orders',
+                            '/invoices': 'invoices',
+                            '/payments': 'payments',
+                            '/accounts': 'chart_of_accounts',
+                            '/journal': 'journals',
+                            '/reports': 'reports',
+                            '/profit-loss': 'profit_loss_report',
+                        };
+                        const mod = moduleMap[link.to];
+                        if (!mod) return true;
+                        return can(user?.role, mod, 'read');
+                    }).map(({ to, icon: Icon, label }) => (
                         <NavLink
                             key={to}
                             to={to}

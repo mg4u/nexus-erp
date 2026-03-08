@@ -4,8 +4,9 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { TrendingUp, Users, Package, ShoppingCart, FileText, DollarSign, AlertTriangle } from 'lucide-react';
-import { reportsApi } from '@/api/services';
-import { useAuthStore } from '@/store/auth.store';
+import { reportsApi, User } from '@/api/services';
+import { AuthUser, useAuthStore } from '@/store/auth.store';
+import { can } from '@/utils/rbac';
 
 const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
 
@@ -25,7 +26,16 @@ function StatCard({ title, value, sub, icon: Icon, iconBg }: {
         </div>
     );
 }
-
+const Header = ({user}: {user: AuthUser | null}) => (
+    <div className="page-header flex items-start justify-between">
+        <div>
+            <h1 className="page-title">
+                Good morning, <span className="text-gradient">{user?.firstName}</span> 👋
+            </h1>
+            <p className="page-subtitle">Here's what's happening with your business today.</p>
+        </div>
+    </div>
+);
 const customTooltipStyle = {
     backgroundColor: '#1e293b',
     border: '1px solid #334155',
@@ -35,6 +45,11 @@ const customTooltipStyle = {
 
 export function DashboardPage() {
     const user = useAuthStore((s) => s.user);
+    const usecCan= can(user?.role, 'reports', 'read')
+    console.log({usecCan});
+    if(!usecCan){
+        return <div><Header user={user} /> <div className="text-red-500">You don't have permission to access this page</div> </div>
+    }
     const { data: summary, isLoading: loadingSummary } = useQuery({
         queryKey: ['reports', 'dashboard'],
         queryFn: reportsApi.getDashboard,
@@ -64,15 +79,8 @@ export function DashboardPage() {
 
     return (
         <div>
-            <div className="page-header flex items-start justify-between">
-                <div>
-                    <h1 className="page-title">
-                        Good morning, <span className="text-gradient">{user?.firstName}</span> 👋
-                    </h1>
-                    <p className="page-subtitle">Here's what's happening with your business today.</p>
-                </div>
-            </div>
-
+            
+            <Header user={user} />
             {/* Stats */}
             {loadingSummary ? (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 animate-pulse">

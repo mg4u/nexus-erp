@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search } from 'lucide-react';
 import { usersApi, User } from '@/api/services';
 import toast from 'react-hot-toast';
+import { Can } from '@/components/common/Can';
 
 const ROLES = ['ADMIN', 'MANAGER', 'ACCOUNTANT', 'EMPLOYEE'];
 
@@ -21,7 +22,7 @@ export function UsersPage() {
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const [showForm, setShowForm] = useState(false);
-    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', role: 'EMPLOYEE', password: '' });
+    const [form, setForm] = useState({ firstName: '', lastName: '', email: '', role: 'EMPLOYEE', password: '', action: 'create', id: '' });
 
     const { data, isLoading } = useQuery({
         queryKey: ['users', { search, page }],
@@ -29,12 +30,42 @@ export function UsersPage() {
     });
 
     const createMutation = useMutation({
-        mutationFn: (d: unknown) => usersApi.create(d),
+        mutationFn: (d: any) => {
+            const { firstName, lastName, email, role, password } = d
+            return usersApi.create({ firstName, lastName, email, role, password })
+        },
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['users'] });
-            setShowForm(false);
-            setForm({ firstName: '', lastName: '', email: '', role: 'EMPLOYEE', password: '' });
+            cancelForm();
             toast.success('User created!');
+        },
+    });
+    const editUser = (user: User) => {
+        setForm({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+            password: '',
+            action: 'update',
+            id: user.id,
+        });
+        setShowForm(true);
+    };
+    const cancelForm = () => {
+        setForm({ firstName: '', lastName: '', email: '', role: 'EMPLOYEE', password: '', action: 'create', id: '' });
+        setShowForm(false);
+    };
+    const updateMutation = useMutation({
+        mutationFn: ({ id, data }: { id: string; data: any }) => {
+            const { firstName, lastName, email, role, password } = data
+            console.log(data);
+            return usersApi.update(id, { firstName, lastName, email, role, password })
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['users'] });
+            cancelForm();
+            toast.success('User updated!');
         },
     });
 
@@ -50,9 +81,11 @@ export function UsersPage() {
                     <h1 className="page-title">Users</h1>
                     <p className="page-subtitle">{data?.total ?? 0} team members</p>
                 </div>
-                <button className="btn-primary" onClick={() => setShowForm(true)}>
-                    <Plus size={18} /> Invite User
-                </button>
+                <Can module="users" action="create">
+                    <button className="btn-primary" onClick={() => setShowForm(true)}>
+                        <Plus size={18} /> Invite User
+                    </button>
+                </Can>
             </div>
 
             <div className="relative mb-5">
@@ -89,11 +122,19 @@ export function UsersPage() {
                                     {u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : 'Never'}
                                 </td>
                                 <td>
-                                    {u.isActive && (
-                                        <button onClick={() => deactivateMutation.mutate(u.id)}
-                                            className="text-xs text-red-400 hover:text-red-300 transition-colors">
-                                            Deactivate
+                                    <Can module="users" action="update">
+                                        <button onClick={() => editUser(u)}
+                                            className="text-xs text-blue-400 hover:text-blue-300 transition-colors mx-2">
+                                            Edit
                                         </button>
+                                    </Can>
+                                    {u.isActive && (
+                                        <Can module="users" action="delete">
+                                            <button onClick={() => deactivateMutation.mutate(u.id)}
+                                                className="text-xs text-red-400 hover:text-red-300 transition-colors">
+                                                Deactivate
+                                            </button>
+                                        </Can>
                                     )}
                                 </td>
                             </tr>
@@ -114,20 +155,20 @@ export function UsersPage() {
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                     <div className="card w-full max-w-md">
                         <h2 className="text-lg font-semibold text-slate-200 mb-5">Invite Team Member</h2>
-                        <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-3">
+                        <form onSubmit={e => { e.preventDefault(); form.action === 'create' ? createMutation.mutate(form) : updateMutation.mutate({ id: form.id, data: form }); }} className="space-y-3">
                             <div className="grid grid-cols-2 gap-3">
                                 <input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} placeholder="First name" className="input" required />
                                 <input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} placeholder="Last name" className="input" required />
                             </div>
                             <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="Email address" className="input" required />
                             <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="input">
-                                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                                {ROLES.map(r => <option key={r} selected={form.role === r}value={r}>{r}</option>)}
                             </select>
                             <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Temporary password" className="input" required />
                             <div className="flex gap-3 pt-2">
-                                <button type="button" className="btn-secondary flex-1 justify-center" onClick={() => setShowForm(false)}>Cancel</button>
-                                <button type="submit" className="btn-primary flex-1 justify-center" disabled={createMutation.isPending}>
-                                    {createMutation.isPending ? 'Creating...' : 'Create User'}
+                                <button type="button" className="btn-secondary flex-1 justify-center" onClick={() => cancelForm()}>Cancel</button>
+                                <button type="submit" className="btn-primary flex-1 justify-center" disabled={form.action === 'create' ? createMutation.isPending : updateMutation.isPending}>
+                                    {form.action === 'create' ? 'Create User' : 'Update User'}
                                 </button>
                             </div>
                         </form>

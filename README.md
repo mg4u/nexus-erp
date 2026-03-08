@@ -277,7 +277,6 @@ The AI module uses an **abstracted provider pattern**. It auto-selects:
 - **Prisma 6** — Type-safe ORM with migrations
 - **PostgreSQL 16** — Row-level multi-tenancy
 - **Redis 7** — Report caching (1hr TTL)
-- **BullMQ** — Background job queues
 - **Passport JWT** — Access + refresh token auth
 - **bcrypt** — Password hashing (12 rounds)
 - **Winston** — Structured logging with daily rotation

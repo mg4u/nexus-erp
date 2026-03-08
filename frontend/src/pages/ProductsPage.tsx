@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Package, AlertTriangle, Pencil, Trash2 } from 'lucide-react';
 import { productsApi, Product } from '@/api/services';
 import toast from 'react-hot-toast';
+import { Can } from '@/components/common/Can';
 
 export function ProductsPage() {
     const qc = useQueryClient();
@@ -55,9 +56,11 @@ export function ProductsPage() {
                     <h1 className="page-title">Products</h1>
                     <p className="page-subtitle">{data?.total ?? 0} products in catalog</p>
                 </div>
-                <button className="btn-primary" onClick={() => { setEditing(null); setForm({ name: '', sku: '', price: '', stockQuantity: '', category: '', description: '' }); setShowForm(true); }}>
-                    <Plus size={18} /> New Product
-                </button>
+                <Can module="products" action="create">
+                    <button className="btn-primary" onClick={() => { setEditing(null); setForm({ name: '', sku: '', price: '', stockQuantity: '', category: '', description: '' }); setShowForm(true); }}>
+                        <Plus size={18} /> New Product
+                    </button>
+                </Can>
             </div>
 
             {/* Search */}
@@ -87,8 +90,12 @@ export function ProductsPage() {
                                 <td><span className="badge-default">{p.category ?? '—'}</span></td>
                                 <td>
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleEdit(p)} className="text-slate-400 hover:text-primary-400 transition-colors"><Pencil size={15} /></button>
-                                        <button onClick={() => deleteMutation.mutate(p.id)} className="text-slate-400 hover:text-red-400 transition-colors"><Trash2 size={15} /></button>
+                                        <Can module="products" action="update">
+                                            <button onClick={() => handleEdit(p)} className="text-slate-400 hover:text-primary-400 transition-colors"><Pencil size={15} /></button>
+                                        </Can>
+                                        <Can module="products" action="delete">
+                                            <button onClick={() => deleteMutation.mutate(p.id)} className="text-slate-400 hover:text-red-400 transition-colors"><Trash2 size={15} /></button>
+                                        </Can>
                                     </div>
                                 </td>
                             </tr>

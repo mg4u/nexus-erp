@@ -9,7 +9,6 @@ C4Context
     title System Context for Multi-Tenant SaaS ERP
 
     Person(admin, "Platform Admin", "Manages the entire platform, tenants, and global settings.")
-    Person(manager, "Tenant Manager", "Manages a specific tenant's users, settings, and high-level reports.")
     Person(accountant, "Accountant", "Manages financial data, CoA, invoices, payments, and P&L reports.")
     Person(employee, "Employee", "Handles day-to-day operations like managing products, customers, and orders.")
 

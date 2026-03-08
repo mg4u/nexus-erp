@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, ChevronRight } from 'lucide-react';
 import { ordersApi, customersApi, productsApi, Order } from '@/api/services';
 import toast from 'react-hot-toast';
+import { Can } from '@/components/common/Can';
 
 const STATUS_COLORS: Record<string, string> = {
     PENDING: 'badge-warning',
@@ -81,9 +82,11 @@ export function OrdersPage() {
                     <h1 className="page-title">Orders</h1>
                     <p className="page-subtitle">{data?.total ?? 0} total orders</p>
                 </div>
-                <button className="btn-primary" onClick={() => setShowCreate(true)}>
-                    <Plus size={18} /> New Order
-                </button>
+                <Can module="orders" action="create">
+                    <button className="btn-primary" onClick={() => setShowCreate(true)}>
+                        <Plus size={18} /> New Order
+                    </button>
+                </Can>
             </div>
 
             {/* Status filter tabs */}
@@ -119,13 +122,15 @@ export function OrdersPage() {
                                 <td className="text-slate-500 text-xs">{new Date(o.createdAt).toLocaleDateString()}</td>
                                 <td>
                                     <div className="flex gap-1">
-                                        {STATUS_TRANSITIONS[o.status]?.map(nextStatus => (
-                                            <button key={nextStatus}
-                                                onClick={() => updateStatusMutation.mutate({ id: o.id, status: nextStatus })}
-                                                className="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors">
-                                                → {nextStatus}
-                                            </button>
-                                        ))}
+                                        <Can module="orders" action="update">
+                                            {STATUS_TRANSITIONS[o.status]?.map(nextStatus => (
+                                                <button key={nextStatus}
+                                                    onClick={() => updateStatusMutation.mutate({ id: o.id, status: nextStatus })}
+                                                    className="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors">
+                                                    → {nextStatus}
+                                                </button>
+                                            ))}
+                                        </Can>
                                     </div>
                                 </td>
                             </tr>

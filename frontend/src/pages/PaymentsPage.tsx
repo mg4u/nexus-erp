@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, CreditCard } from 'lucide-react';
 import { paymentsApi, invoicesApi } from '@/api/services';
 import toast from 'react-hot-toast';
+import { Can } from '@/components/common/Can';
 
 const PAYMENT_METHODS = ['BANK_TRANSFER', 'CREDIT_CARD', 'CASH', 'PAYPAL', 'STRIPE'];
 
@@ -58,9 +59,11 @@ export function PaymentsPage() {
                     <h1 className="page-title">Payments</h1>
                     <p className="page-subtitle">{data?.total ?? 0} payment records</p>
                 </div>
-                <button className="btn-primary" onClick={() => setShowForm(true)}>
-                    <Plus size={18} /> Record Payment
-                </button>
+                <Can module="payments" action="create">
+                    <button className="btn-primary" onClick={() => setShowForm(true)}>
+                        <Plus size={18} /> Record Payment
+                    </button>
+                </Can>
             </div>
 
             <div className="table-container">

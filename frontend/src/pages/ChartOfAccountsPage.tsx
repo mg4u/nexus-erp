@@ -9,6 +9,7 @@ import {
     CreateAccountPayload, UpdateAccountPayload
 } from '@/api/services';
 import toast from 'react-hot-toast';
+import { Can } from '@/components/common/Can';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -70,8 +71,8 @@ function TreeNode({ node, depth, onEdit, onDisable, onDelete, onTogglePostable }
                     {/* isPostable badge — always visible so state is obvious */}
                     {!hasChildren && (
                         <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${node.isPostable
-                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
-                                : 'bg-slate-700/50 text-slate-500 border border-slate-700'
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                            : 'bg-slate-700/50 text-slate-500 border border-slate-700'
                             }`}>
                             {node.isPostable ? 'Postable' : 'Not Postable'}
                         </span>
@@ -88,43 +89,51 @@ function TreeNode({ node, depth, onEdit, onDisable, onDelete, onTogglePostable }
 
                 {/* Actions */}
                 <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                        onClick={() => onEdit(node)}
-                        className="text-slate-500 hover:text-primary-400 transition-colors p-1 rounded"
-                        title="Edit account"
-                    >
-                        <Pencil size={13} />
-                    </button>
+                    <Can module="chart_of_accounts" action="update">
+                        <button
+                            onClick={() => onEdit(node)}
+                            className="text-slate-500 hover:text-primary-400 transition-colors p-1 rounded"
+                            title="Edit account"
+                        >
+                            <Pencil size={13} />
+                        </button>
+                    </Can>
                     {/* Toggle postable (leaf accounts only) */}
                     {!hasChildren && (
-                        <button
-                            onClick={() => onTogglePostable(node)}
-                            className={`transition-colors p-1 rounded ${node.isPostable
+                        <Can module="chart_of_accounts" action="update">
+                            <button
+                                onClick={() => onTogglePostable(node)}
+                                className={`transition-colors p-1 rounded ${node.isPostable
                                     ? 'text-emerald-500 hover:text-slate-400'
                                     : 'text-slate-500 hover:text-emerald-400'
-                                }`}
-                            title={node.isPostable ? 'Disable posting on this account' : 'Enable posting on this account'}
-                        >
-                            {node.isPostable ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
-                        </button>
+                                    }`}
+                                title={node.isPostable ? 'Disable posting on this account' : 'Enable posting on this account'}
+                            >
+                                {node.isPostable ? <ToggleRight size={15} /> : <ToggleLeft size={15} />}
+                            </button>
+                        </Can>
                     )}
                     {!node.isSystem && node.isActive && (
-                        <button
-                            onClick={() => onDisable(node)}
-                            className="text-slate-500 hover:text-amber-400 transition-colors p-1 rounded"
-                            title="Disable account"
-                        >
-                            <EyeOff size={13} />
-                        </button>
+                        <Can module="chart_of_accounts" action="update">
+                            <button
+                                onClick={() => onDisable(node)}
+                                className="text-slate-500 hover:text-amber-400 transition-colors p-1 rounded"
+                                title="Disable account"
+                            >
+                                <EyeOff size={13} />
+                            </button>
+                        </Can>
                     )}
                     {!node.isSystem && (
-                        <button
-                            onClick={() => onDelete(node)}
-                            className="text-slate-500 hover:text-red-400 transition-colors p-1 rounded"
-                            title="Delete account"
-                        >
-                            <Trash2 size={13} />
-                        </button>
+                        <Can module="chart_of_accounts" action="delete">
+                            <button
+                                onClick={() => onDelete(node)}
+                                className="text-slate-500 hover:text-red-400 transition-colors p-1 rounded"
+                                title="Delete account"
+                            >
+                                <Trash2 size={13} />
+                            </button>
+                        </Can>
                     )}
                 </div>
             </div>
@@ -332,18 +341,22 @@ export function ChartOfAccountsPage() {
                     <p className="page-subtitle">{totalAccounts} accounts · hierarchical accounting tree</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => seedMutation.mutate()}
-                        disabled={seedMutation.isPending}
-                        className="btn-secondary gap-2"
-                        title="Seed default accounts for this tenant"
-                    >
-                        <Zap size={15} />
-                        {seedMutation.isPending ? 'Seeding...' : 'Seed Defaults'}
-                    </button>
-                    <button className="btn-primary" onClick={() => openCreate()}>
-                        <Plus size={18} /> New Account
-                    </button>
+                    <Can module="chart_of_accounts" action="create">
+                        <>
+                            <button
+                                onClick={() => seedMutation.mutate()}
+                                disabled={seedMutation.isPending}
+                                className="btn-secondary gap-2"
+                                title="Seed default accounts for this tenant"
+                            >
+                                <Zap size={15} />
+                                {seedMutation.isPending ? 'Seeding...' : 'Seed Defaults'}
+                            </button>
+                            <button className="btn-primary" onClick={() => openCreate()}>
+                                <Plus size={18} /> New Account
+                            </button>
+                        </>
+                    </Can>
                 </div>
             </div>
 
@@ -469,18 +482,20 @@ export function ChartOfAccountsPage() {
                                     <td className="text-slate-400 text-sm font-mono">L{a.level}</td>
                                     {/* Postable toggle */}
                                     <td>
-                                        <button
-                                            onClick={() => togglePostableMutation.mutate(a.id)}
-                                            className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${a.isPostable
+                                        <Can module="chart_of_accounts" action="update">
+                                            <button
+                                                onClick={() => togglePostableMutation.mutate(a.id)}
+                                                className={`flex items-center gap-1.5 text-xs font-medium transition-colors ${a.isPostable
                                                     ? 'text-emerald-400 hover:text-slate-400'
                                                     : 'text-slate-500 hover:text-emerald-400'
-                                                }`}
-                                            title={a.isPostable ? 'Click to disable posting' : 'Click to enable posting'}
-                                        >
-                                            {a.isPostable
-                                                ? <><ToggleRight size={16} /> Postable</>
-                                                : <><ToggleLeft size={16} /> Not Postable</>}
-                                        </button>
+                                                    }`}
+                                                title={a.isPostable ? 'Click to disable posting' : 'Click to enable posting'}
+                                            >
+                                                {a.isPostable
+                                                    ? <><ToggleRight size={16} /> Postable</>
+                                                    : <><ToggleLeft size={16} /> Not Postable</>}
+                                            </button>
+                                        </Can>
                                     </td>
                                     <td>
                                         <span className={`badge-${a.isActive ? 'success' : 'default'}`}>
@@ -489,12 +504,18 @@ export function ChartOfAccountsPage() {
                                     </td>
                                     <td>
                                         <div className="flex gap-2">
-                                            <button onClick={() => openEdit(a)} className="text-slate-400 hover:text-primary-400 transition-colors"><Pencil size={14} /></button>
+                                            <Can module="chart_of_accounts" action="update">
+                                                <button onClick={() => openEdit(a)} className="text-slate-400 hover:text-primary-400 transition-colors"><Pencil size={14} /></button>
+                                            </Can>
                                             {!a.isSystem && a.isActive && (
-                                                <button onClick={() => disableMutation.mutate(a.id)} className="text-slate-400 hover:text-amber-400 transition-colors"><EyeOff size={14} /></button>
+                                                <Can module="chart_of_accounts" action="update">
+                                                    <button onClick={() => disableMutation.mutate(a.id)} className="text-slate-400 hover:text-amber-400 transition-colors"><EyeOff size={14} /></button>
+                                                </Can>
                                             )}
                                             {!a.isSystem && (
-                                                <button onClick={() => setConfirmDelete(a)} className="text-slate-400 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+                                                <Can module="chart_of_accounts" action="delete">
+                                                    <button onClick={() => setConfirmDelete(a)} className="text-slate-400 hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+                                                </Can>
                                             )}
                                         </div>
                                     </td>

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText, Clock, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { invoicesApi, Invoice } from '@/api/services';
 import toast from 'react-hot-toast';
+import { Can } from '@/components/common/Can';
 
 const STATUS_CONFIG: Record<string, { badge: string; icon: React.ElementType; next: string[] }> = {
     DRAFT: { badge: 'badge-default', icon: FileText, next: ['SENT', 'CANCELLED'] },
@@ -98,13 +99,17 @@ export function InvoicesPage() {
                                     </td>
                                     <td>
                                         <div className="flex gap-1 flex-wrap">
-                                            {cfg.next.map(nextStatus => (
-                                                <button key={nextStatus}
-                                                    onClick={() => updateMutation.mutate({ id: inv.id, status: nextStatus })}
-                                                    className="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors">
-                                                    → {nextStatus}
-                                                </button>
-                                            ))}
+                                            <Can module="invoices" action="update">
+                                                <>
+                                                    {cfg.next.map(nextStatus => (
+                                                        <button key={nextStatus}
+                                                            onClick={() => updateMutation.mutate({ id: inv.id, status: nextStatus })}
+                                                            className="text-xs px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition-colors">
+                                                            → {nextStatus}
+                                                        </button>
+                                                    ))}
+                                                </>
+                                            </Can>
                                         </div>
                                     </td>
                                 </tr>
